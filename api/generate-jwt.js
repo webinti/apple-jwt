@@ -1,59 +1,53 @@
+// /api/generate-jwt.js
 const jwt = require('jsonwebtoken');
 
-// Récupération depuis les variables d'environnement Vercel
-const APPLE_PRIVATE_KEY = process.env.APPLE_PRIVATE_KEY;
-const TEAM_ID = process.env.TEAM_ID;
-const CLIENT_ID = process.env.CLIENT_ID;
-const KEY_ID = process.env.KEY_ID;
+// IMPORTANT: corriger les \n stockés dans Vercel
+const PRIVATE_KEY = (process.env.APPLE_PRIVATE_KEY || '').replace(/\\n/g, '\n');
+const TEAM_ID = process.env.TEAM_ID;     // Apple Team ID
+const CLIENT_ID = process.env.CLIENT_ID; // Services ID (ex: com.tonapp.web)
+const KEY_ID = process.env.KEY_ID;       // Key ID de la clé .p8
 
 module.exports = async (req, res) => {
-  // Configuration CORS
+  // CORS basique
   res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  res.setHeader('Cache-Control', 'no-store');
 
-  // Gérer les requêtes OPTIONS (preflight)
-  if (req.method === 'OPTIONS') {
-    return res.status(200).end();
-  }
+  if (req.method === 'OPTIONS') return res.status(200).end();
+  if (req.method !== 'POST') return res.status(405).json({ error: 'Method Not Allowed' });
 
-  // Vérifier que les variables d'environnement sont présentes
-  if (!APPLE_PRIVATE_KEY || !TEAM_ID || !CLIENT_ID || !KEY_ID) {
-    return res.status(500).json({ 
-      error: 'Server configuration error',
-      message: 'Missing environment variables. Please configure: APPLE_PRIVATE_KEY, TEAM_ID, CLIENT_ID, KEY_ID'
+  if (!PRIVATE_KEY || !TEAM_ID || !CLIENT_ID || !KEY_ID) {
+    return res.status(500).json({
+      error: 'server_config',
+      message: 'Missing env vars: APPLE_PRIVATE_KEY, TEAM_ID, CLIENT_ID, KEY_ID'
     });
   }
 
   try {
-    // Génération du JWT
-    const token = jwt.sign(
-      {},
-      APPLE_PRIVATE_KEY,
-      {
-        algorithm: 'ES256',
-        expiresIn: '180d',
-        audience: 'https://appleid.apple.com',
-        issuer: TEAM_ID,
-        subject: CLIENT_ID,
-        header: {
-          alg: 'ES256',
-          kid: KEY_ID
-        }
-      }
-    );
+    const now = Math.floor(Date.now() / 1000);
+    const exp = now + 60 * 60 * 24 * 180; // 180 jours
+
+    const payload = {
+      iss: TEAM_ID,
+      iat: now,
+      exp,
+      aud: 'https://appleid.apple.com',
+      sub: CLIENT_ID
+    };
+
+    const token = jwt.sign(payload, PRIVATE_KEY, {
+      algorithm: 'ES256',
+      keyid: KEY_ID
+    });
 
     return res.status(200).json({
       client_secret: token,
-      expires_in: 15552000,
+      expires_in: exp - now,
       generated_at: new Date().toISOString()
     });
-
-  } catch (error) {
-    console.error('Error generating JWT:', error);
-    return res.status(500).json({ 
-      error: 'Failed to generate token',
-      message: error.message 
-    });
+  } catch (e) {
+    console.error('Error generating JWT:', e);
+    return res.status(500).json({ error: 'jwt_generation_failed', message: e.message });
   }
 };
