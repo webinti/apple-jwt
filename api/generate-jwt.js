@@ -1,19 +1,13 @@
 const jwt = require('jsonwebtoken');
 
-// Votre clé privée Apple (contenu du fichier .p8)
-const APPLE_PRIVATE_KEY = `-----BEGIN PRIVATE KEY-----
-MIGTAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBHkwdwIBAQQgLHMjsv0wA1Ro1O+0
-bbrW49V7p/KZ0/vS9jBCDb+ebTugCgYIKoZIzj0DAQehRANCAAR8N0+bqppONFFZ
-W2Irg9NFuJmbgDoDpY8c+lPDhZCJNUnKml42KSOfw9SHDJd5BsLL15RNKjjJzZAe
-w+rWow7Q
------END PRIVATE KEY-----`;
-
-const TEAM_ID = '379BFP3Y99'; // Votre Team ID
-const CLIENT_ID = 'com.webinti.sign'; // Votre Service ID
-const KEY_ID = 'NSCPFZ994X'; // Votre Key ID
+// Récupération depuis les variables d'environnement Vercel
+const APPLE_PRIVATE_KEY = process.env.APPLE_PRIVATE_KEY;
+const TEAM_ID = process.env.TEAM_ID;
+const CLIENT_ID = process.env.CLIENT_ID;
+const KEY_ID = process.env.KEY_ID;
 
 module.exports = async (req, res) => {
-  // Configuration CORS pour autoriser Bubble
+  // Configuration CORS
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
@@ -23,15 +17,22 @@ module.exports = async (req, res) => {
     return res.status(200).end();
   }
 
+  // Vérifier que les variables d'environnement sont présentes
+  if (!APPLE_PRIVATE_KEY || !TEAM_ID || !CLIENT_ID || !KEY_ID) {
+    return res.status(500).json({ 
+      error: 'Server configuration error',
+      message: 'Missing environment variables. Please configure: APPLE_PRIVATE_KEY, TEAM_ID, CLIENT_ID, KEY_ID'
+    });
+  }
 
   try {
     // Génération du JWT
     const token = jwt.sign(
-      {}, // Payload vide
+      {},
       APPLE_PRIVATE_KEY,
       {
         algorithm: 'ES256',
-        expiresIn: '180d', // 6 mois (maximum autorisé par Apple)
+        expiresIn: '180d',
         audience: 'https://appleid.apple.com',
         issuer: TEAM_ID,
         subject: CLIENT_ID,
@@ -44,7 +45,7 @@ module.exports = async (req, res) => {
 
     return res.status(200).json({
       client_secret: token,
-      expires_in: 15552000, // 180 jours en secondes
+      expires_in: 15552000,
       generated_at: new Date().toISOString()
     });
 
