@@ -24,6 +24,22 @@ module.exports = async (req, res) => {
     });
   }
 
+// Vérification basique de sécurité
+const authHeader = req.headers.authorization;
+const SECRET_TOKEN = process.env.SECRET_TOKEN;
+
+// Si le SECRET_TOKEN n'est pas défini, retourner une erreur
+if (!SECRET_TOKEN) {
+  return res.status(500).json({ 
+    error: 'Server configuration error',
+    message: 'SECRET_TOKEN is not configured' 
+  });
+}
+
+// Vérifier l'authentification
+if (!authHeader || authHeader !== `Bearer ${SECRET_TOKEN}`) {
+  return res.status(401).json({ error: 'Unauthorized' });
+}
   try {
     const now = Math.floor(Date.now() / 1000);
     const exp = now + 60 * 60 * 24 * 180; // 180 jours
