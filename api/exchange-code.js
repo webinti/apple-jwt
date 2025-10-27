@@ -26,16 +26,16 @@ export default async function handler(req, res) {
     
     const clientSecret = jwt.sign(
       {
-        iss: process.env.APPLE_TEAM_ID,
+        iss: process.env.TEAM_ID,
         iat: Math.floor(Date.now() / 1000),
         exp: Math.floor(Date.now() / 1000) + 86400 * 180, // 6 mois
         aud: 'https://appleid.apple.com',
-        sub: process.env.APPLE_CLIENT_ID,
+        sub: process.env.CLIENT_ID,
       },
       privateKey,
       {
         algorithm: 'ES256',
-        keyid: process.env.APPLE_KEY_ID,
+        keyid: process.env.KEY_ID,
       }
     );
 
@@ -48,11 +48,11 @@ export default async function handler(req, res) {
         'Content-Type': 'application/x-www-form-urlencoded',
       },
       body: new URLSearchParams({
-        client_id: process.env.APPLE_CLIENT_ID,
+        client_id: process.env.CLIENT_ID,
         client_secret: clientSecret,
         code: code,
         grant_type: 'authorization_code',
-        redirect_uri: process.env.APPLE_REDIRECT_URI,
+        redirect_uri: process.env.REDIRECT_URI,
       }),
     });
 
