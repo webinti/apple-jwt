@@ -16,7 +16,7 @@ export default async function handler(req, res) {
     }
 
     // Construire l'URL de redirection vers Bubble
-    const bubbleCallbackUrl = 'https://app.webinti.com/version-test/apple-callback';
+    const bubbleCallbackUrl = 'https://app.webinti.com/api/1.1/mobile/preview?preview_view=callback';
     
     // Créer les paramètres à envoyer à Bubble
     const params = new URLSearchParams({
